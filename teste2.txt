@@ -1,2 +1,3 @@
 Teste de integracao
 alteracoes para novo commit
+fechando a issue
