@@ -37,11 +37,13 @@ jobs:
       - name: Update YouTrack issues
         if: env.ISSUES != ''
         run: |
-          IFS=' ' read -r -a issue_array <<< "$ISSUES"
-          IFS=' ' read -r -a state_array <<< "$STATES"
+          # Converte strings em arrays
+          issue_array=($ISSUES)
+          state_array=($STATES)
+
           for idx in "${!issue_array[@]}"; do
             issue=${issue_array[$idx]}
-            state=${state_array[$idx]:-In Progress} # default se não tiver
+            state=${state_array[$idx]:-In Progress}
             # Extrai comentário removendo ID e estado
             comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/$state//" | xargs)
             echo "Updating $issue with state $state and comment: $comment"
@@ -53,3 +55,4 @@ jobs:
                     "issues": [{"idReadable": "'"$issue"'"}],
                     "comment": "'"$comment"'"
                   }'
+          done
