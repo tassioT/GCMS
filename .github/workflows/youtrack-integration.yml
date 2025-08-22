@@ -16,7 +16,7 @@ jobs:
         fetch-depth: 0
 
     - name: Update YouTrack issues
-      uses: JetBrains/youtrack-workflow@v1
+      uses: youtrack/youtrack-action@v1
       with:
         youtrack-url: ${{ secrets.YOUTRACK_URL }}
         youtrack-token: ${{ secrets.YOUTRACK_TOKEN }}
