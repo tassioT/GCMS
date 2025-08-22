@@ -25,33 +25,39 @@ jobs:
           echo "Parsing commit messages..."
           # Extrai todas as issues (formato PROJ-NUM)
           issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+' || true)
-          # Extrai todos os estados que vêm com # e remove o #
-          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true | sed 's/^#//')
+          # Extrai todos os estados que vêm com # - captura tudo após o # até o final da linha
+          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[^#]*' || true | sed 's/^#//' | xargs)
           
           echo "Found issues: $issues"
           echo "Found states: $states"
           echo "ISSUES=$issues" >> $GITHUB_ENV
-          echo "STATES=$states" >> $GITHUB_ENV
+          echo "STATES=\"$states\"" >> $GITHUB_ENV
 
       - name: Update YouTrack issues
         if: env.ISSUES != ''
         run: |
           # Convert strings to arrays
           IFS=' ' read -r -a issue_array <<< "$ISSUES"
-          IFS=' ' read -r -a state_array <<< "$STATES"
+          
+          # Para estados, usamos quebra de linha como separador para preservar espaços
+          IFS=$'\n' read -r -d '' -a state_array <<< "$STATES" || true
 
           for idx in "${!issue_array[@]}"; do
             issue=${issue_array[$idx]}
             # Usa o estado correspondente ou padrão se não houver
-            state=${state_array[$idx]:-"In Progress"}
+            if [ ${#state_array[@]} -gt $idx ]; then
+              state="${state_array[$idx]}"
+            else
+              state="In Progress"
+            fi
             
-            # Remove qualquer # que possa ter sobrado
-            state=$(echo "$state" | sed 's/^#//')
+            # Remove espaços extras
+            state=$(echo "$state" | xargs)
 
             # Debug: mostrar no terminal
             echo "-----------------------------------------"
             echo "Issue: $issue"
-            echo "State (sem #): $state"
+            echo "State: $state"
             echo "JSON que será enviado:"
             echo "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}] }"
 
