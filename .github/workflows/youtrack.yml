@@ -2,8 +2,7 @@ name: YouTrack Integration
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, master, develop ]
 
 jobs:
   youtrack-update:
@@ -12,25 +11,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update YouTrack Issue
+      - name: Update YouTrack issue
         uses: actions/github-script@v6
         with:
           script: |
-            const issueId = 'RAM-21'; // substitua pelo ID real
+            const issueId = 'RAM-21'; // ID de teste
             const command = 'Done';
-            const url = '${{ secrets.YOUTRACK_URL }}';
+            const url = 'https://tvts.myjetbrains.com/youtrack';
             const token = '${{ secrets.YOUTRACK_TOKEN }}';
 
             const response = await fetch(`${url}/api/issues/${issueId}/execute`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
               },
               body: JSON.stringify({ command })
             });
 
             if (!response.ok) {
-              throw new Error(`Failed to update issue: ${response.statusText}`);
+              throw new Error(`Failed to update issue: ${response.status} ${response.statusText}`);
             }
             console.log(`Issue ${issueId} updated successfully.`);
