@@ -1,39 +1,3 @@
-name: Update YouTrack Issue State
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  youtrack-update:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Extract commit messages
-        id: commits
-        run: |
-          echo "COMMIT_MESSAGES<<EOF" >> $GITHUB_ENV
-          git log -1 --pretty=%B >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-
-      - name: Parse YouTrack issue IDs, states, and comments
-        id: parse
-        run: |
-          echo "Parsing commit messages..."
-          # Extrai todos os padrões #ISSUE-ID
-          issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+' || true)
-          # Extrai todos os padrões #Estado
-          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true | sed 's/#//g')
-          # Remove # da issue e limpa espaços
-          issues=$(echo $issues | sed 's/#//g')
-          echo "ISSUES=$issues" >> $GITHUB_ENV
-          echo "STATES=$states" >> $GITHUB_ENV
-          echo "Found issues: $issues"
-          echo "Found states: $states"
-
       - name: Update YouTrack issues
         if: env.ISSUES != ''
         run: |
@@ -46,12 +10,28 @@ jobs:
             state=${state_array[$idx]:-In Progress}
             # Extrai comentário removendo ID e estado
             comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/$state//" | xargs)
-            echo "Updating $issue with state $state and comment: $comment"
+            
+            # Mostrar os parâmetros antes de enviar
+            echo "-----------------------------------------"
+            echo "Issue: $issue"
+            echo "State: $state"
+            echo "Comment: $comment"
+            
+            # Construir corpo JSON
+            json_body=$(cat <<EOF
+{
+  "query": "$state",
+  "issues": [{"idReadable": "$issue"}],
+  "comment": "$comment"
+}
+EOF
+)
+            echo "JSON enviado para o curl:"
+            echo "$json_body"
+
+            # Chamada curl
             curl -X POST "https://tvts.youtrack.cloud/api/commands" \
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d '{
-                    "query": "'"$state"'",
-                    "issues": [{"idReadable": "'"$issue"'"}],
-                  }'
+              -d "$json_body"
           done
