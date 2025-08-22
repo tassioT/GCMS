@@ -1,12 +1,40 @@
-name: YouTrack Integration
+name: Update YouTrack Issue State
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches:
+      - main  # ou sua branch principal
 
 jobs:
-  build:
+  update-youtrack:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Extract commit messages
+        id: commits
+        run: |
+          echo "COMMIT_MESSAGES<<EOF" >> $GITHUB_ENV
+          git log -1 --pretty=%B >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Parse YouTrack issue IDs
+        id: parse
+        run: |
+          echo "Parsing commit messages..."
+          issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+')
+          echo "ISSUES=$issues" >> $GITHUB_ENV
+          echo "Found issues: $issues"
+
+      - name: Update YouTrack issues
+        if: env.ISSUES != ''
+        run: |
+          echo "Updating issues in YouTrack..."
+          for issue in $ISSUES; do
+            echo "Updating $issue..."
+            curl -X POST "https://<YOUR_YOUTRACK_URL>/api/issues/$issue/execute" \
+              -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{"query": "State In Progress"}'
+          done
