@@ -53,6 +53,5 @@ jobs:
               -d '{
                     "query": "'"$state"'",
                     "issues": [{"idReadable": "'"$issue"'"}],
-                    "comment": "'"$comment"'"
                   }'
           done
