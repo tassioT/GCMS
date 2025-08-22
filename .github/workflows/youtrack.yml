@@ -23,38 +23,38 @@ jobs:
         id: parse
         run: |
           echo "Parsing commit messages..."
-          # Extrai todos os padrões #ISSUE-ID
+          # Extrai todas as issues (formato PROJ-NUM)
           issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+' || true)
-          # Extrai todos os padrões #Estado
+          # Extrai todos os estados que vêm com #
           states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true | sed 's/#//g')
-          # Remove # da issue e limpa espaços
           issues=$(echo $issues | sed 's/#//g')
-          echo "ISSUES=$issues" >> $GITHUB_ENV
-          echo "STATES=$states" >> $GITHUB_ENV
           echo "Found issues: $issues"
           echo "Found states: $states"
+          echo "ISSUES=$issues" >> $GITHUB_ENV
+          echo "STATES=$states" >> $GITHUB_ENV
 
       - name: Update YouTrack issues
         if: env.ISSUES != ''
         run: |
-          # Converte strings em arrays
           issue_array=($ISSUES)
           state_array=($STATES)
 
           for idx in "${!issue_array[@]}"; do
             issue=${issue_array[$idx]}
             state=${state_array[$idx]:-In Progress}
-            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/$state//" | xargs)
+
+            # Extrai comentário removendo ID e estado
+            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/#?$state//" | xargs)
             
-            # Mostra no terminal
+            # Debug: mostrar no terminal
             echo "-----------------------------------------"
             echo "Issue: $issue"
             echo "State: $state"
             echo "Comment: $comment"
-            echo "JSON que seria enviado:"
+            echo "JSON que será enviado:"
             echo "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}], \"comment\": \"$comment\" }"
 
-            # Aqui continua o curl normalmente
+            # Envia para o YouTrack
             curl -X POST "https://tvts.youtrack.cloud/api/commands" \
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
               -H "Content-Type: application/json" \
