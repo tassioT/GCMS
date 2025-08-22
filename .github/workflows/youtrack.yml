@@ -3,7 +3,7 @@ name: Update YouTrack Issue State
 on:
   push:
     branches:
-      - main  # ou sua branch principal
+      - main
 
 jobs:
   youtrack-update:
@@ -19,17 +19,16 @@ jobs:
           git log -1 --pretty=%B >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Parse YouTrack issue IDs and commands
+      - name: Parse YouTrack issue IDs, states, and comments
         id: parse
         run: |
           echo "Parsing commit messages..."
           # Extrai todos os padrões #ISSUE-ID
-          issues=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Z]+-[0-9]+' || true)
+          issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+' || true)
           # Extrai todos os padrões #Estado
-          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true)
-          # Remove # da issue e do estado
+          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true | sed 's/#//g')
+          # Remove # da issue e limpa espaços
           issues=$(echo $issues | sed 's/#//g')
-          states=$(echo $states | sed 's/#//g')
           echo "ISSUES=$issues" >> $GITHUB_ENV
           echo "STATES=$states" >> $GITHUB_ENV
           echo "Found issues: $issues"
@@ -43,8 +42,8 @@ jobs:
           for idx in "${!issue_array[@]}"; do
             issue=${issue_array[$idx]}
             state=${state_array[$idx]:-In Progress} # default se não tiver
-            # Extrai comentário removendo #ISSUE e #Estado
-            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/#${issue}//" | sed -E "s/#${state}//" | xargs)
+            # Extrai comentário removendo ID e estado
+            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/$state//" | xargs)
             echo "Updating $issue with state $state and comment: $comment"
             curl -X POST "https://tvts.youtrack.cloud/api/commands" \
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
