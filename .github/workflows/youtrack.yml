@@ -66,4 +66,4 @@ jobs:
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
               -H "Content-Type: application/json" \
               -d "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}] }"
-          done
+          done  
