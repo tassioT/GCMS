@@ -19,7 +19,7 @@ jobs:
           git log -1 --pretty=%B >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Parse YouTrack issue IDs, states, and comments
+      - name: Parse YouTrack issue IDs and states
         id: parse
         run: |
           echo "Parsing commit messages..."
@@ -48,23 +48,16 @@ jobs:
             # Remove qualquer # que possa ter sobrado
             state=$(echo "$state" | sed 's/^#//')
 
-            # Extrai comentário removendo a issue e qualquer #Estado
-            comment=$(echo "$COMMIT_MESSAGES" \
-              | sed -E "s/$issue//g" \
-              | sed -E "s/#[[:alpha:]]+[[:space:]]*//g" \
-              | xargs)
-            
             # Debug: mostrar no terminal
             echo "-----------------------------------------"
             echo "Issue: $issue"
             echo "State (sem #): $state"
-            echo "Comment: $comment"
             echo "JSON que será enviado:"
-            echo "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}], \"comment\": \"$comment\" }"
+            echo "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}] }"
 
             # Envia para o YouTrack
             curl -X POST "https://tvts.youtrack.cloud/api/commands" \
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}], \"comment\": \"$comment\" }"
+              -d "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}] }"
           done
