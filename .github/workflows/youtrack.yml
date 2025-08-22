@@ -70,3 +70,4 @@ jobs:
               -H "Content-Type: application/json" \
               -d "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}] }"
           done
+ 
