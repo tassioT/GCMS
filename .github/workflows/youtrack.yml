@@ -25,8 +25,8 @@ jobs:
           echo "Parsing commit messages..."
           # Extrai todas as issues (formato PROJ-NUM)
           issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+' || true)
-          # Extrai todos os estados que vêm com #
-          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true | sed 's/#//g')
+          # Extrai todos os estados que vêm com # e remove o #
+          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true | sed 's/^#//')
           issues=$(echo $issues | sed 's/#//g')
           echo "Found issues: $issues"
           echo "Found states: $states"
@@ -43,8 +43,11 @@ jobs:
             issue=${issue_array[$idx]}
             state=${state_array[$idx]:-In Progress}
 
-            # Extrai comentário removendo a issue e o #Estado do commit
-            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/#$state[[:space:]]*//" | xargs)
+            # Extrai comentário removendo a issue e qualquer #Estado
+            comment=$(echo "$COMMIT_MESSAGES" \
+              | sed -E "s/$issue//" \
+              | sed -E "s/#[[:alpha:]]+[[:space:]]*//" \
+              | xargs)
             
             # Debug: mostrar no terminal
             echo "-----------------------------------------"
