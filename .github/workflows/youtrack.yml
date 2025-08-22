@@ -26,10 +26,10 @@ jobs:
           # Extrai todas as issues (formato PROJ-NUM)
           issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+' || true)
           # Extrai todos os estados que vêm com # - captura tudo após o # até o final da linha
-          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[^#]*' || true | sed 's/^#//' | xargs)
+          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[^#]*' || true | sed 's/^#//' | sed 's/^ *//;s/ *$//')
           
           echo "Found issues: $issues"
-          echo "Found states: $states"
+          echo "Found states: '$states'"
           echo "ISSUES=$issues" >> $GITHUB_ENV
           echo "STATES=\"$states\"" >> $GITHUB_ENV
 
@@ -40,24 +40,26 @@ jobs:
           IFS=' ' read -r -a issue_array <<< "$ISSUES"
           
           # Para estados, usamos quebra de linha como separador para preservar espaços
-          IFS=$'\n' read -r -d '' -a state_array <<< "$STATES" || true
+          # Primeiro precisamos converter a string STATES em um array com quebras de linha
+          state_list=$(echo "$STATES" | tr ' ' '\n')
+          IFS=$'\n' read -r -d '' -a state_array <<< "$state_list" || true
 
           for idx in "${!issue_array[@]}"; do
             issue=${issue_array[$idx]}
             # Usa o estado correspondente ou padrão se não houver
-            if [ ${#state_array[@]} -gt $idx ]; then
+            if [ ${#state_array[@]} -gt $idx ] && [ -n "${state_array[$idx]}" ]; then
               state="${state_array[$idx]}"
             else
               state="In Progress"
             fi
             
-            # Remove espaços extras
-            state=$(echo "$state" | xargs)
+            # Remove espaços extras e qualquer # remanescente
+            state=$(echo "$state" | sed 's/^#//' | xargs)
 
             # Debug: mostrar no terminal
             echo "-----------------------------------------"
             echo "Issue: $issue"
-            echo "State: $state"
+            echo "State: '$state'"
             echo "JSON que será enviado:"
             echo "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}] }"
 
@@ -66,4 +68,4 @@ jobs:
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
               -H "Content-Type: application/json" \
               -d "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}] }"
-          done  
+          done
