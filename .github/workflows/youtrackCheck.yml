@@ -1,0 +1,38 @@
+name: Comment YouTrack with Test Results
+
+on:
+  workflow_run:
+    workflows: ["Run Tests"]  # nome do workflow que roda seus testes
+    types:
+      - completed
+
+jobs:
+  youtrack-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Extract issues from last commit
+        id: extract
+        run: |
+          # Extrai todas as issues do commit (formato PROJ-NUM)
+          ISSUES=$(git log -1 --pretty=%B | grep -oE '[A-Z]+-[0-9]+' || true)
+          echo "Found issues: $ISSUES"
+          echo "ISSUES=$ISSUES" >> $GITHUB_ENV
+
+      - name: Comment test results
+        run: |
+          if [ "${GITHUB_EVENT_WORKFLOW_RUN_CONCLUSION}" = "success" ]; then
+            COMMENT="Tests completed successfully ✅"
+          else
+            COMMENT="⚠️ Tests failed. Check CI logs."
+          fi
+
+          for ISSUE in $ISSUES; do
+            echo "Commenting on issue $ISSUE: $COMMENT"
+            curl -X POST "https://tvts.youtrack.cloud/api/commands" \
+              -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"comment\":\"$COMMENT\"}"
+          done
