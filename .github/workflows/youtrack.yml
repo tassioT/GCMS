@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, closed, reopened, edited]
 
 jobs:
   youtrack-update:
@@ -13,16 +11,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Update YouTrack issues
-        uses: youtrack/youtrack-action@v1
+      - name: Update YouTrack Issue
+        uses: actions/github-script@v6
         with:
-          youtrack-url: ${{ secrets.YOUTRACK_URL }}
-          youtrack-token: ${{ secrets.YOUTRACK_TOKEN }}
-          message-template: |
-            {user} {action} no GitHub: {issue}
-            Commit: {commit}
-            Branch: {branch}
-            Link: {link}
+          script: |
+            const issueId = 'RAM-21'; // substitua pelo ID real
+            const command = 'Done';
+            const url = '${{ secrets.YOUTRACK_URL }}';
+            const token = '${{ secrets.YOUTRACK_TOKEN }}';
+
+            const response = await fetch(`${url}/api/issues/${issueId}/execute`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ command })
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to update issue: ${response.statusText}`);
+            }
+            console.log(`Issue ${issueId} updated successfully.`);
