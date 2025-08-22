@@ -33,8 +33,12 @@ jobs:
           echo "Updating issues in YouTrack..."
           for issue in $ISSUES; do
             echo "Updating $issue..."
-            curl -X POST "https://tvts.youtrack.cloud/api/issues/$issue/execute" \
+            curl -X POST "https://tvts.youtrack.cloud/api/commands" \
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d '{"query": "State In Progress"}'
+              -d '{
+                    "query": "State In Progress",
+                    "issues": [{"idReadable": "'"$issue"'"}],
+                    "comment": "Updated via GitHub Actions"
+                  }'
           done
