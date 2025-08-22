@@ -43,13 +43,13 @@ jobs:
             issue=${issue_array[$idx]}
             state=${state_array[$idx]:-In Progress}
 
-            # Extrai comentário removendo ID e estado
-            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/#?$state//" | xargs)
+            # Extrai comentário removendo a issue e o #Estado do commit
+            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/$issue//" | sed -E "s/#$state[[:space:]]*//" | xargs)
             
             # Debug: mostrar no terminal
             echo "-----------------------------------------"
             echo "Issue: $issue"
-            echo "State: $state"
+            echo "State (sem #): $state"
             echo "Comment: $comment"
             echo "JSON que será enviado:"
             echo "{ \"query\": \"$state\", \"issues\": [{\"idReadable\": \"$issue\"}], \"comment\": \"$comment\" }"
