@@ -3,7 +3,7 @@ name: Update YouTrack Issue State
 on:
   push:
     branches:
-      - main  # ou sua branch principal
+      - main
 
 jobs:
   youtrack-update:
@@ -19,26 +19,39 @@ jobs:
           git log -1 --pretty=%B >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Parse YouTrack issue IDs
+      - name: Parse YouTrack issue IDs and commands
         id: parse
         run: |
           echo "Parsing commit messages..."
-          issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+')
+          # Extrai todos os padrões #ISSUE-ID
+          issues=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Z]+-[0-9]+')
+          # Extrai todos os padrões #Estado
+          states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+')
+          # Remove # da issue e do estado
+          issues=$(echo $issues | sed 's/#//g')
+          states=$(echo $states | sed 's/#//g' | sed 's/'"${issues}"'//g')
           echo "ISSUES=$issues" >> $GITHUB_ENV
+          echo "STATES=$states" >> $GITHUB_ENV
           echo "Found issues: $issues"
+          echo "Found states: $states"
 
       - name: Update YouTrack issues
         if: env.ISSUES != ''
         run: |
-          echo "Updating issues in YouTrack..."
-          for issue in $ISSUES; do
-            echo "Updating $issue..."
+          IFS=' ' read -r -a issue_array <<< "$ISSUES"
+          IFS=' ' read -r -a state_array <<< "$STATES"
+          for idx in "${!issue_array[@]}"; do
+            issue=${issue_array[$idx]}
+            state=${state_array[$idx]:-In Progress} # default se não tiver
+            # Extrai comentário (remove #ISSUE e #Estado)
+            comment=$(echo "$COMMIT_MESSAGES" | sed -E "s/#${issue}//" | sed -E "s/#${state}//" | xargs)
+            echo "Updating $issue with state $state and comment: $comment"
             curl -X POST "https://tvts.youtrack.cloud/api/commands" \
               -H "Authorization: Bearer ${{ secrets.YOUTRACK_TOKEN }}" \
               -H "Content-Type: application/json" \
               -d '{
-                    "query": "State In Progress",
+                    "query": "'"$state"'",
                     "issues": [{"idReadable": "'"$issue"'"}],
-                    "comment": "Updated via GitHub Actions"
+                    "comment": "'"$comment"'"
                   }'
           done
