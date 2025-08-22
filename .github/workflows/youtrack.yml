@@ -27,7 +27,7 @@ jobs:
           issues=$(echo "$COMMIT_MESSAGES" | grep -oE '[A-Z]+-[0-9]+' || true)
           # Extrai todos os estados que vêm com # e remove o #
           states=$(echo "$COMMIT_MESSAGES" | grep -oE '#[A-Za-z]+' || true | sed 's/^#//')
-          issues=$(echo $issues | sed 's/#//g')
+          
           echo "Found issues: $issues"
           echo "Found states: $states"
           echo "ISSUES=$issues" >> $GITHUB_ENV
@@ -36,17 +36,22 @@ jobs:
       - name: Update YouTrack issues
         if: env.ISSUES != ''
         run: |
-          issue_array=($ISSUES)
-          state_array=($STATES)
+          # Convert strings to arrays
+          IFS=' ' read -r -a issue_array <<< "$ISSUES"
+          IFS=' ' read -r -a state_array <<< "$STATES"
 
           for idx in "${!issue_array[@]}"; do
             issue=${issue_array[$idx]}
-            state=${state_array[$idx]:-In Progress}
+            # Usa o estado correspondente ou padrão se não houver
+            state=${state_array[$idx]:-"In Progress"}
+            
+            # Remove qualquer # que possa ter sobrado
+            state=$(echo "$state" | sed 's/^#//')
 
             # Extrai comentário removendo a issue e qualquer #Estado
             comment=$(echo "$COMMIT_MESSAGES" \
-              | sed -E "s/$issue//" \
-              | sed -E "s/#[[:alpha:]]+[[:space:]]*//" \
+              | sed -E "s/$issue//g" \
+              | sed -E "s/#[[:alpha:]]+[[:space:]]*//g" \
               | xargs)
             
             # Debug: mostrar no terminal
